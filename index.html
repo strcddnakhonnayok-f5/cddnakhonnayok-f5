@@ -1,0 +1,1652 @@
+<!doctype html>
+<html lang="th">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการข้อมูล สพจ.นครนายก</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    * {
+      font-family: 'Sarabun', 'Prompt', sans-serif;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: #d1d5db;
+      border: 1px solid #d1d5db;
+    }
+
+    .calendar-day {
+      background: white;
+      min-height: 100px;
+      padding: 8px;
+      position: relative;
+    }
+
+    .calendar-day-header {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #047857;
+    }
+
+    .calendar-event {
+      font-size: 11px;
+      padding: 2px 4px;
+      margin-bottom: 2px;
+      border-radius: 3px;
+      cursor: pointer;
+      word-wrap: break-word;
+      line-height: 1.3;
+    }
+
+    .area-mueang { background-color: #bbf7d0; color: #166534; }
+    .area-banna { background-color: #bfdbfe; color: #1e40af; }
+    .area-ongkharak { background-color: #fef08a; color: #854d0e; }
+    .area-pakphli { background-color: #fed7aa; color: #9a3412; }
+    .area-songsoem { background-color: #d9cdb8; color: #78350f; }
+    .area-info { background-color: #bae6fd; color: #075985; }
+    .area-prasarn { background-color: #ddd6fe; color: #5b21b6; }
+    .area-strategy { background-color: #5eead4; color: #134e4a; }
+    .area-women-fund { background-color: #fbcfe8; color: #9f1239; }
+
+    .today {
+      background-color: #ecfdf5 !important;
+      border: 2px solid #10b981;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .tab-button {
+      padding: 12px 24px;
+      border: none;
+      background: #e5e7eb;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .tab-button.active {
+      background: #14b8a6;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .database-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 2px;
+      border-radius: 4px;
+      font-size: 12px;
+      background: #14b8a6;
+      color: white;
+    }
+
+    .loading-spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #14b8a6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 2000;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full w-full">
+  <div id="app" class="h-full w-full" style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);"><!-- Login Screen -->
+   <div id="loginScreen" class="h-full w-full flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+     <div class="flex justify-center mb-6">
+      <svg class="w-24 h-24" viewbox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" fill="#14b8a6" /> <path d="M50 20 L65 35 L50 50 L35 35 Z" fill="white" /> <rect x="35" y="50" width="30" height="25" fill="white" /> <path d="M30 75 L50 85 L70 75" stroke="white" stroke-width="3" fill="none" />
+      </svg>
+     </div>
+     <h1 class="text-2xl font-bold text-center mb-2" style="color: #14b8a6;">ระบบจัดการข้อมูล</h1>
+     <p class="text-center text-gray-600 mb-8">สำนักงา  พัฒนาชุมชนจังหวั  นครนายก</p>
+     <div class="space-y-4 mb-6"><button onclick="loginAsStaff()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition"> เข้าสู่ระบบสำหรับเจ้าหน้าที่ </button> <button onclick="loginAsGuest()" class="w-full bg-white hover:bg-gray-50 text-teal-600 font-semibold py-3 px-6 rounded-lg border-2 border-teal-600 transition"> เข้าชมปฏิทินและฐานข้อมูล </button>
+     </div>
+    </div>
+   </div><!-- Main App -->
+   <div id="mainApp" class="h-full w-full" style="display: none;"><!-- Header -->
+    <div class="bg-white shadow-md">
+     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+       <svg class="w-12 h-12" viewbox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="45" fill="#14b8a6" /> <path d="M50 20 L65 35 L50 50 L35 35 Z" fill="white" /> <rect x="35" y="50" width="30" height="25" fill="white" /> <path d="M30 75 L50 85 L70 75" stroke="white" stroke-width="3" fill="none" />
+       </svg>
+       <div>
+        <h1 class="text-xl font-bold" style="color: #14b8a6;" id="appTitle">ระบบจัดการข้อมูล สพจ.นครนายก</h1>
+        <p class="text-sm text-gray-600" id="userStatus">ผู้เยี่ยมชม</p>
+       </div>
+      </div><button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"> ออกจากระบบ </button>
+     </div>
+    </div><!-- Navigation Tabs -->
+    <div class="bg-white border-b">
+     <div class="max-w-7xl mx-auto px-4">
+      <div class="flex space-x-2"><button class="tab-button active" onclick="switchTab('calendar')"> 📅 ปฏิทินแผนการปฏิบัติงาน </button> <button class="tab-button" onclick="switchTab('database')"> 📊 ฐานข้อมูลหมู่บ้าน </button>
+      </div>
+     </div>
+    </div><!-- Calendar Tab -->
+    <div id="calendarTab" class="tab-content active max-w-7xl mx-auto px-4 py-6">
+     <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+      <div class="flex justify-between items-center mb-6">
+       <div>
+        <h2 class="text-2xl font-bold" style="color: #14b8a6;" id="calendarTitle">ปฏิทินแผนการปฏิบัติงาน</h2>
+        <p class="text-gray-600">สำนักงานพัฒนาชุมชนจังหวัดนครนายก</p>
+       </div><button id="addEventBtn" onclick="openEventModal()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition" style="display: none;"> ➕ เพิ่มกิจกรรม </button>
+      </div><!-- Calendar Navigation -->
+      <div class="flex justify-between items-center mb-4"><button onclick="previousMonth()" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition"> ←   ดือนก่อน </button>
+       <h3 class="text-xl font-semibold" id="currentMonth">มกราคม 2025</h3><button onclick="nextMonth()" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition"> เดือนถัดไป → </button>
+      </div><!-- Legend -->
+      <div class="mb-4 grid grid-cols-3 md:grid-cols-5 gap-2 text-xs">
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-mueang"></div><span>อ.เมือง</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-banna"></div><span>อ.บ้านนา</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-ongkharak"></div><span>อ.องครักษ์</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-pakphli"></div><span>อ.ปากพลี</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-songsoem"></div><span>ส่งเสริม</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-info"></div><span>สารสนเทศ</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-prasarn"></div><span>ประสาน</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-strategy"></div><span>ยุทธศาส  ร์</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <div class="w-4 h-4 rounded area-women-fund"></div><span>กองทุนสตรี</span>
+       </div>
+      </div><!-- Calendar Grid -->
+      <div class="calendar-grid" id="calendarGrid"><!-- Calendar will be generated here -->
+      </div>
+     </div><!-- Today's Activities -->
+     <div class="bg-white rounded-xl shadow-lg p-6">
+      <h3 class="text-xl font-bold mb-4" style="color: #14b8a6;">📌 กิจกรรมวันนี้</h3>
+      <div id="todayActivities">
+       <p class="text-gray-500 text-center py-8">ไม่มีกิจกรรมในวันนี้</p>
+      </div>
+     </div>
+    </div><!-- Database Tab -->
+    <div id="databaseTab" class="tab-content max-w-7xl mx-auto px-4 py-6">
+     <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+      <div class="flex justify-between items-center mb-6">
+       <div>
+        <h2 class="text-2xl font-bold" style="color: #14b8a6;" id="dashboardTitle">ฐานข้อมูลหมู่บ้าน</h2>
+        <p class="text-gray-600">จังหวัดนครนายก (450 หมู่บ้าน 40 ตำบล 4 อำเภอ)</p>
+       </div><button id="addVillageBtn" onclick="openVillageModal()" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition" style="display: none;"> ➕ เพิ่มข้อมูลหมู่บ้าน </button>
+      </div><!-- Filters -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+       <div><label class="block text-sm font-semibold mb-2 text-gray-700">อำเภอ</label> <select id="districtFilter" onchange="filterByDistrict()" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"> <option value="">ทั้งหมด</option> <option value="เมืองนครนายก">เมืองนครนายก</option> <option value="บ้านนา">บ้านนา</option> <option value="องครักษ์">องครักษ์</option> <option value="ปากพลี">ปากพลี</option> </select>
+       </div>
+       <div><label class="block text-sm font-semibold mb-2 text-gray-700">ตำบล</label> <select id="subdistrictFilter" onchange="filterBySubdistrict()" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"> <option value="">เลือกตำบล</option> </select>
+       </div>
+       <div><label class="block text-sm font-semibold mb-2 text-gray-700">ค้นหา</label> <input type="text" id="searchVillage" onkeyup="searchVillages()" placeholder="ค้นหาหมู่บ้าน..." class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+       </div>
+      </div><!-- Village Table -->
+      <div class="overflow-x-auto">
+       <table class="w-full">
+        <thead class="bg-teal-50">
+         <tr>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">หมู่บ้าน</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">หมู่ที่</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">ตำบล</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">อำเภอ</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">ฐานข้อมูล</th>
+          <th class="px-4 py-3 text-center text-sm font-semibold text-teal-900" id="villageActionHeader" style="display: none;">จัดการ</th>
+         </tr>
+        </thead>
+        <tbody id="villageTableBody">
+         <tr>
+          <td colspan="6" class="px-4 py-8 text-center text-gray-500">กำลังโหลดข้อมูล...</td>
+         </tr>
+        </tbody>
+       </table>
+      </div>
+     </div>
+    </div>
+   </div><!-- Event Modal -->
+   <div id="eventModal" class="modal">
+    <div class="modal-content">
+     <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+       <h3 class="text-2xl font-bold" style="color: #14b8a6;">เพิ่มกิจกรรม</h3><button onclick="closeEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+      </div>
+      <form id="eventForm" onsubmit="saveEvent(event)"><input type="hidden" id="eventId">
+       <div class="space-y-4">
+        <div><label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อกิจกรรม *</label> <input type="text" id="activityName" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+         <div><label class="block text-sm font-semibold mb-2 text-gray-700">วันที่ *</label> <input type="date" id="eventDate" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+         </div>
+         <div><label class="block text-sm font-semibold mb-2 text-gray-700">เวลา</label> <input type="time" id="eventTime" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+         </div>
+        </div>
+        <div><label class="block text-sm font-semibold mb-2 text-gray-700">พื้นที่ *</label> <select id="eventArea" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"> <option value="">เลือกพื้นที่</option> <option value="เมืองนครนายก">อำเภอเมืองนครนายก</option> <option value="บ้านนา">อำเภอบ้านนา</option> <option value="องครักษ์">อำเภออังครักษ์</option> <option value="ปากพลี">อำเภ   ปากพลี</option> <option value="ส   งเสริม">กลุ่มงานส่งเสริม</option> <option value="สารสนเทศ">กลุ่มงานสารสนเทศ</option> <option value="ประสาน">กลุ่มงานประสาน</option> <option value="ยุทธศาสตร์">กลุ่มงานยุทธศาสตร์</option> <option value="กองทุนสตรี">กองทุนพัฒนาบทบาทสตรี</option> </select>
+        </div>
+        <div><label class="block text-sm font-semibold mb-2 text-gray-700">สถานที่ดำเนินกิจกรรม</label> <input type="text" id="eventLocation" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+        </div>
+        <div><label class="block text-sm font-semibold mb-2 text-gray-700">กลุ่ม   ป้า    าย</label> <input type="text" id="targetGroup" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+        </div>
+        <div><label class="block text-sm font-semibold mb-2 text-gray-700">รายละเอียด</label> <textarea id="eventDetails" rows="3" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"></textarea>
+        </div>
+        <div><label class="block text-sm font-semibold mb-2 text-gray-700">ผู้รับผิดชอบ</label> <input type="text" id="responsiblePerson" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+        </div>
+       </div>
+       <div class="mt-6 flex space-x-3"><button type="submit" id="saveEventBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg font-semibold transition"> บันทึก </button> <button type="button" onclick="closeEventModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition"> ยกเลิก </button>
+       </div>
+      </form>
+     </div>
+    </div>
+   </div><!-- Day Detail Modal -->
+   <div id="dayDetailModal" class="modal">
+    <div class="modal-content">
+     <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+       <h3 class="text-2xl font-bold" style="color: #14b8a6;" id="dayDetailTitle">กิจกรรมประจำวัน</h3><button onclick="closeDayDetailModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+      </div>
+      <div id="dayDetailContent"><!-- Activities will be listed here -->
+      </div>
+     </div>
+    </div>
+   </div><!-- Village Modal -->
+   <div id="villageModal" class="modal">
+    <div class="modal-content">
+     <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+       <h3 class="text-2xl font-bold" style="color: #14b8a6;">เพิ่มข้อมูลหมู  บ้าน</h3><button onclick="closeVillageModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+      </div>
+      <form id="villageForm" onsubmit="saveVillage(event)"><input type="hidden" id="villageId">
+       <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+         <div><label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อหมู่บ้าน *</label> <input type="text" id="villageName" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+         </div>
+         <div><label class="block text-sm font-semibold mb-2 text-gray-700">หมู่ที่ *</label> <input type="text" id="villageNo" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+         </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+         <div><label class="block text-sm font-semibold mb-2 text-gray-700">อำเภอ *</label> <select id="villageDistrict" required onchange="updateSubdistrictOptions()" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"> <option value="">เลือกอำเภอ</option> <option value="เมืองนครนายก">เมืองนครนายก</option> <option value="บ้านนา">บ้านนา</option> <option value="องครักษ์">องครักษ์</option> <option value="ปากพลี">ปากพลี</option> </select>
+         </div>
+         <div><label class="block text-sm font-semibold mb-2 text-gray-700">ตำบล *</label> <select id="villageSubdistrict" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"> <option value="">เลือกตำบล</option> </select>
+         </div>
+        </div>
+        <div><label class="block text-sm font-semibold mb-4 text-gray-700">ฐานข้อมูลที่มี</label>
+         <div class="grid grid-cols-2 gap-3"><label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasSavingGroup" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">กลุ่มออมทรัพย์เพื่อการผลิต</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasKokProject" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">   ครงการ กข.คจ.</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasMomFund" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">กองทุนแม่ของแผ่นดิน</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasInfoModel" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">สารสนเทศตำบลต้นแบบ</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasOtop" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">OTOP</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasSufficiencyVillage" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">หมู่บ้านเศรษฐกิจพอเพียง</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasKokNongNa" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">โคก หนอง นา</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasTourismCommunity" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">ชุมชนท่อ  เที่ยว นวัต  ิถี</span> </label> <label class="flex items-center space-x-2 cursor-pointer"> <input type="checkbox" id="hasVillageFund" class="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"> <span class="text-sm">กองทุนหมู่บ้าน</span> </label>
+         </div>
+        </div>
+       </div>
+       <div class="mt-6 flex space-x-3"><button type="submit" id="saveVillageBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg font-semibold transition"> บันทึก </button> <button type="button" onclick="closeVillageModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition"> ยกเลิก </button>
+       </div>
+      </form>
+     </div>
+    </div>
+   </div><!-- Database Detail Modal -->
+   <div id="databaseDetailModal" class="modal">
+    <div class="modal-content">
+     <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+       <h3 class="text-2xl font-bold" style="color: #14b8a6;" id="databaseDetailTitle">ข้อมูลกลุ่ม</h3><button onclick="closeDatabaseDetailModal()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+      </div><!-- List of existing records -->
+      <div id="databaseRecordsList" class="mb-6"><!-- Records will be displayed here -->
+      </div><!-- Add new record button --> <button id="addDatabaseRecordBtn" onclick="showDatabaseForm()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg font-semibold transition mb-4" style="display: none;"> ➕ เพิ่มข้อมูล </button> <!-- Database Detail Form -->
+      <form id="databaseDetailForm" onsubmit="saveDatabaseDetail(event)" style="display: none;"><input type="hidden" id="detailId"> <input type="hidden" id="detailVillageId"> <input type="hidden" id="detailType">
+       <div id="formFieldsContainer"><!-- Dynamic form fields will be inserted here -->
+       </div>
+       <div class="mt-6 flex space-x-3"><button type="submit" id="saveDatabaseDetailBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg font-semibold transition"> บันทึก </button> <button type="button" onclick="cancelDatabaseForm()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition"> ยกเลิก </button>
+       </div>
+      </form>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      app_title: "ระบบจัดการข้อมูล สพจ.นครนายก",
+      calendar_title: "ปฏิทินแผนการปฏิบัติงาน",
+      dashboard_title: "ฐานข้อมูลหมู่บ้าน"
+    };
+
+    let allData = [];
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let isStaff = false;
+    let isLoading = false;
+
+    const subdistrictData = {
+      "เมืองนครนายก": ["นครนายก", "บ้านใหญ่", "ท่าช้าง", "ดอนยอ", "ศรีจุฬา", "วังกระโจม", "ดงละคร", "สาริกา", "หินตั   ง", "เขาพระ"],
+      "บ้านนา": ["บ้านนา", "บ้านพร้าว", "บ้านพริก", "อาษา", "พิกุลออก", "ป่าขะ", "ทองหลาง", "บางอ้อ"],
+      "องครักษ์": ["องครักษ์", "บางสมบูรณ์", "บึงศาล", "ชุมพล", "โพธิ์แทน", "บางลูกเสือ", "คลองใหญ่", "ทรายมูล", "พระอาจารย์"],
+      "ปากพลี": ["ปากพลี", "เกาะหวาย", "เกาะโ  ธิ์", "โคกก   วด", "ท่าเรือ", "นาหินลาด", "หนองแสง", "เขาเพิ่ม"]
+    };
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allData = data;
+        renderCalendar();
+        renderTodayActivities();
+        renderVillageTable();
+      }
+    };
+
+    async function initApp() {
+      const result = await window.dataSdk.init(dataHandler);
+      if (!result.isOk) {
+        console.error("Failed to initialize SDK");
+      }
+    }
+
+    function loginAsStaff() {
+      isStaff = true;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('userStatus').textContent = 'เจ้าหน้าที่';
+      document.getElementById('addEventBtn').style.display = 'block';
+      document.getElementById('addVillageBtn').style.display = 'block';
+      document.getElementById('villageActionHeader').style.display = 'table-cell';
+      renderCalendar();
+      renderVillageTable();
+    }
+
+    function loginAsGuest() {
+      isStaff = false;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('userStatus').textContent = 'ผู้เยี่ยมชม (ดูอย่างเดียว)';
+      document.getElementById('addEventBtn').style.display = 'none';
+      document.getElementById('addVillageBtn').style.display = 'none';
+      document.getElementById('villageActionHeader').style.display = 'none';
+      renderCalendar();
+      renderVillageTable();
+    }
+
+    function logout() {
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      if (tabName === 'calendar') {
+        document.querySelectorAll('.tab-button')[0].classList.add('active');
+        document.getElementById('calendarTab').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-button')[1].classList.add('active');
+        document.getElementById('databaseTab').classList.add('active');
+        renderVillageTable();
+      }
+    }
+
+    function getAreaClass(area) {
+      const areaMap = {
+        'เมืองนค  นายก': 'area-mueang',
+        'บ้านนา': 'area-banna',
+        'องครักษ์': 'area-ongkharak',
+        'ปากพลี': 'area-pakphli',
+        'ส่งเสริม': 'area-songsoem',
+        'สารสนเทศ': 'area-info',
+        'ประสาน': 'area-prasarn',
+        'ยุทธศาสตร์': 'area-strategy',
+        'กองทุนสตรี': 'area-women-fund'
+      };
+      return areaMap[area] || 'area-mueang';
+    }
+
+    function renderCalendar() {
+      const monthNames = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 
+                          'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+      const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+      
+      document.getElementById('currentMonth').textContent = `${monthNames[currentMonth]} ${currentYear + 543}`;
+      
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      
+      // Day headers
+      dayNames.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day bg-teal-50 text-center font-semibold';
+        header.textContent = day;
+        grid.appendChild(header);
+      });
+      
+      // Empty cells before first day
+      for (let i = 0; i < firstDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'calendar-day bg-gray-50';
+        grid.appendChild(empty);
+      }
+      
+      // Calendar days
+      const today = new Date();
+      const isCurrentMonth = today.getMonth() === currentMonth && today.getFullYear() === currentYear;
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+        
+        if (isCurrentMonth && day === today.getDate()) {
+          dayCell.classList.add('today');
+        }
+        
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = allData.filter(item => item.type === 'event' && item.date === dateStr);
+        
+        dayCell.innerHTML = `<div class="calendar-day-header">${day}</div>`;
+        
+        dayEvents.forEach(event => {
+          const eventDiv = document.createElement('div');
+          eventDiv.className = `calendar-event ${getAreaClass(event.area)}`;
+          eventDiv.textContent = event.activity_name;
+          eventDiv.onclick = () => showDayDetail(dateStr);
+          dayCell.appendChild(eventDiv);
+        });
+        
+        dayCell.onclick = (e) => {
+          if (e.target === dayCell || e.target.className.includes('calendar-day-header')) {
+            showDayDetail(dateStr);
+          }
+        };
+        
+        grid.appendChild(dayCell);
+      }
+    }
+
+    function renderTodayActivities() {
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const todayEvents = allData.filter(item => item.type === 'event' && item.date === dateStr);
+      
+      const container = document.getElementById('todayActivities');
+      
+      if (todayEvents.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-8">ไ  ่มีกิจกรรมในวันนี้</p>';
+        return;
+      }
+      
+      container.innerHTML = todayEvents.map(event => `
+        <div class="border-l-4 ${getAreaClass(event.area)} bg-gray-50 p-4 mb-3 rounded-r-lg">
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-semibold text-lg">${event.activity_name}</h4>
+              <p class="text-sm text-gray-600 mt-1">⏰ ${event.time || 'ไม่ระบุเวลา'}</p>
+              <p class="text-sm text-gray-600">📍 ${event.area}</p>
+              ${event.location ? `<p class="text-sm text-gray-600">🏢 ${event.location}</p>` : ''}
+              ${event.responsible_person ? `<p class="text-sm text-gray-600 mt-2">👤 ผู้  ับผิดชอบ: ${event.responsible_person}</p>` : ''}
+            </div>
+            ${isStaff ? `
+            <div class="flex space-x-2">
+              <button onclick="editEvent('${event.__backendId}')" class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded">✏️</button>
+              <button onclick="deleteEvent('${event.__backendId}')" class="text-red-600 hover:text-red-800 px-3 py-1 rounded">    ️</button>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showDayDetail(dateStr) {
+      const dayEvents = allData.filter(item => item.type === 'event' && item.date === dateStr);
+      const [year, month, day] = dateStr.split('-');
+      const dateObj = new Date(year, month - 1, day);
+      const monthNames = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 
+                          'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+      
+      document.getElementById('dayDetailTitle').textContent = `กิจกรรมวันที่ ${parseInt(day)} ${monthNames[parseInt(month) - 1]} ${parseInt(year) + 543}`;
+      
+      const content = document.getElementById('dayDetailContent');
+      
+      if (dayEvents.length === 0) {
+        content.innerHTML = '<p class="text-gray-500 text-center py-8">ไม่มีกิจกรรมในวันนี้</p>';
+      } else {
+        content.innerHTML = dayEvents.map(event => `
+          <div class="border-l-4 ${getAreaClass(event.area)} bg-gray-50 p-4 mb-4 rounded-r-lg">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-semibold text-lg">${event.activity_name}</h4>
+              ${isStaff ? `
+              <div class="flex space-x-2">
+                <button onclick="editEvent('${event.__backendId}')" class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded bg-blue-50">✏️ แก้ไข</button>
+                <button onclick="deleteEvent('${event.__backendId}')" class="text-red-600 hover:text-red-800 px-3 py-1 rounded bg-red-50">🗑️ ลบ</button>
+              </div>
+              ` : ''}
+            </div>
+            <div class="space-y-1 text-sm text-gray-700">
+              <p>⏰ เวลา: ${event.time || 'ไม่ระบุเวลา'}</p>
+              <p>📍 พื้นที่: ${event.area}</p>
+              ${event.location ? `<p>🏢 สถานที่: ${event.location}</p>` : ''}
+              ${event.target_group ? `<p>👥 กลุ่มเป้าหมาย: ${event.target_group}</p>` : ''}
+              ${event.details ? `<p>📝 รายละเอียด: ${event.details}</p>` : ''}
+              ${event.responsible_person ? `<p>👤 ผู้รับผิดชอบ: ${event.responsible_person}</p>` : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      document.getElementById('dayDetailModal').classList.add('active');
+    }
+
+    function previousMonth() {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar();
+    }
+
+    function openEventModal() {
+      if (!isStaff) return;
+      document.getElementById('eventForm').reset();
+      document.getElementById('eventId').value = '';
+      document.getElementById('eventModal').classList.add('active');
+    }
+
+    function closeEventModal() {
+      document.getElementById('eventModal').classList.remove('active');
+    }
+
+    function closeDayDetailModal() {
+      document.getElementById('dayDetailModal').classList.remove('active');
+    }
+
+    async function saveEvent(e) {
+      e.preventDefault();
+      if (!isStaff || isLoading) return;
+      
+      isLoading = true;
+      const submitBtn = document.getElementById('saveEventBtn');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'กำลังบันทึก...';
+      submitBtn.disabled = true;
+      
+      const eventId = document.getElementById('eventId').value;
+      const eventData = {
+        type: 'event',
+        activity_name: document.getElementById('activityName').value,
+        date: document.getElementById('eventDate').value,
+        time: document.getElementById('eventTime').value,
+        area: document.getElementById('eventArea').value,
+        location: document.getElementById('eventLocation').value,
+        target_group: document.getElementById('targetGroup').value,
+        details: document.getElementById('eventDetails').value,
+        responsible_person: document.getElementById('responsiblePerson').value,
+        created_at: new Date().toISOString()
+      };
+      
+      let result;
+      if (eventId) {
+        const existingEvent = allData.find(item => item.__backendId === eventId);
+        result = await window.dataSdk.update({ ...existingEvent, ...eventData });
+      } else {
+        eventData.id = 'event_' + Date.now();
+        result = await window.dataSdk.create(eventData);
+      }
+      
+      if (result.isOk) {
+        showToast('บันทึกกิจกรรมเรียบร้อยแล้ว');
+        closeEventModal();
+        
+        // Send to Google Sheets
+        await sendToGoogleSheets(eventData, eventId ? 'update' : 'create');
+      } else {
+        showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+      }
+      
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+      isLoading = false;
+    }
+
+    function editEvent(backendId) {
+      if (!isStaff) return;
+      const event = allData.find(item => item.__backendId === backendId);
+      if (!event) return;
+      
+      document.getElementById('eventId').value = backendId;
+      document.getElementById('activityName').value = event.activity_name || '';
+      document.getElementById('eventDate').value = event.date || '';
+      document.getElementById('eventTime').value = event.time || '';
+      document.getElementById('eventArea').value = event.area || '';
+      document.getElementById('eventLocation').value = event.location || '';
+      document.getElementById('targetGroup').value = event.target_group || '';
+      document.getElementById('eventDetails').value = event.details || '';
+      document.getElementById('responsiblePerson').value = event.responsible_person || '';
+      
+      closeDayDetailModal();
+      document.getElementById('eventModal').classList.add('active');
+    }
+
+    async function deleteEvent(backendId) {
+      if (!isStaff || isLoading) return;
+      
+      const event = allData.find(item => item.__backendId === backendId);
+      if (!event) return;
+      
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      confirmDiv.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-sm">
+          <h3 class="text-lg font-semibold mb-4">ยืนยันการลบ</h3>
+          <p class="text-gray-600 mb-6">คุณต้องการลบกิจก   รม "${event.activity_name}" หรือไม่?</p>
+          <div class="flex space-x-3">
+            <button onclick="confirmDelete('${backendId}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">ลบ</button>
+            <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg">ยกเลิก</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(confirmDiv);
+    }
+
+    async function confirmDelete(backendId) {
+      if (isLoading) return;
+      
+      isLoading = true;
+      const event = allData.find(item => item.__backendId === backendId);
+      
+      const result = await window.dataSdk.delete(event);
+      
+      if (result.isOk) {
+        showToast('ลบกิจกรรมเรียบร้อยแล้ว');
+        closeDayDetailModal();
+        
+        // Send delete to Google Sheets
+        await sendToGoogleSheets(event, 'delete');
+      } else {
+        showToast('เกิดข้อผิดพลาด   นการลบ', 'error');
+      }
+      
+      document.querySelectorAll('.fixed').forEach(el => {
+        if (el.querySelector('button[onclick*="confirmDelete"]')) {
+          el.remove();
+        }
+      });
+      
+      isLoading = false;
+    }
+
+    const bankList = ['ธนาคารกรุงเทพ', 'ธนาคารกสิกรไทย', 'ธนาคารกรุงไทย', 'ธนาคารทหารไทย', 'ธนาคารไทยพาณิชย์', 'ธนาคารกรุงศรีอยุธยา', 'ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร (ธ.ก.ส.)', 'ธนาคารออมสิน', 'ธนาคารอาคาร  งเคราะห์', 'ธนาคารอิสลามแห่งประ   ทศไทย'];
+
+    let currentDatabaseVillageId = '';
+    let currentDatabaseType = '';
+
+    function openDatabaseDetailModal(villageId, dbType, displayName) {
+      currentDatabaseVillageId = villageId;
+      currentDatabaseType = dbType;
+      
+      document.getElementById('databaseDetailTitle').textContent = `ข้อมูล${displayName}`;
+      document.getElementById('databaseDetailModal').classList.add('active');
+      
+      // Show add button only for staff
+      const addBtn = document.getElementById('addDatabaseRecordBtn');
+      if (isStaff) {
+        addBtn.style.display = 'block';
+      } else {
+        addBtn.style.display = 'none';
+      }
+      
+      // Load existing records
+      loadDatabaseRecords(villageId, dbType);
+      
+      // Hide form initially
+      document.getElementById('databaseDetailForm').style.display = 'none';
+    }
+
+    function closeDatabaseDetailModal() {
+      document.getElementById('databaseDetailModal').classList.remove('active');
+      currentDatabaseVillageId = '';
+      currentDatabaseType = '';
+    }
+
+    function loadDatabaseRecords(villageId, dbType) {
+      const records = allData.filter(item => 
+        item.type === 'database_detail' && 
+        item.parent_village_id === villageId && 
+        item.database_type === dbType
+      );
+      
+      const container = document.getElementById('databaseRecordsList');
+      
+      if (records.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">ยังไม่มีข้อมูล</p>';
+        return;
+      }
+      
+      container.innerHTML = records.map(record => {
+        return `
+          <div class="bg-gray-50 rounded-lg p-4 mb-3">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-semibold text-lg">${record.group_name || record.plot_name || record.community_name || '   ม่ระบุชื่อ'}</h4>
+              ${isStaff ? `
+              <div class="flex space-x-2">
+                <button onclick="editDatabaseRecord('${record.__backendId}')" class="text-blue-600 hover:text-blue-800 px-2">✏️</button>
+                <button onclick="deleteDatabaseRecord('${record.__backendId}')" class="text-red-600 hover:text-red-800 px-2">🗑️</button>
+              </div>
+              ` : ''}
+            </div>
+            <div class="text-sm text-gray-700 space-y-1">
+              ${formatRecordDisplay(record, dbType)}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatRecordDisplay(record, dbType) {
+      let html = '';
+      
+      if (dbType === 'saving_group') {
+        html += record.president_name ? `<p>ประธาน: ${record.president_name}</p>` : '';
+        html += record.established_year ? `<p>ปีที่จัด  ั้ง: ${record.established_year}</p>` : '';
+        html += record.member_count ? `<p>จำนว  สมาชิก: ${record.member_count} คน</p>` : '';
+        html += record.faith_amount ? `<p>เงินสัจจะ: ${record.faith_amount} บาท</p>` : '';
+        html += record.borrower_count ? `<p>ผู้กู้ยืม: ${record.borrower_count} คน</p>` : '';
+        html += record.loan_amount ? `<p>จำนวนเงินกู้: ${record.loan_amount} บาท</p>` : '';
+        html += record.account_balance ? `<p>เงินคงเหลือ: ${record.account_balance} บาท</p>` : '';
+        html += record.bank_account ? `<p>บัญชีธนาคาร: ${record.bank_account}</p>` : '';
+      } else if (dbType === 'kok_project' || dbType === 'village_fund') {
+        html += record.president_name ? `<p>ประธาน: ${record.president_name}</p>` : '';
+        html += record.member_count ? `<p>จำนวนสมาชิก: ${record.member_count} คน</p>` : '';
+        html += record.faith_amount ? `<p>เงินสัจจะ: ${record.faith_amount} บาท</p>` : '';
+        html += record.borrower_count ? `<p>ผู้กู้ยืม: ${record.borrower_count} คน</p>` : '';
+        html += record.loan_amount ? `<p>จำนวนเงินยืม: ${record.loan_amount} บาท</p>` : '';
+        html += record.account_balance ? `<p>เงินคงเหลือ: ${record.account_balance} บาท</p>` : '';
+        html += record.bank_name ? `<p>ธนาคาร: ${record.bank_name}</p>` : '';
+        html += record.bank_account_number ? `<p>เลขที่บัญชี: ${record.bank_account_number}</p>` : '';
+        html += record.loan_year ? `<p>ปีที่ยืม: ${record.loan_year}</p>` : '';
+        html += record.contract_period ? `<p>ระยะเวลาสัญญา: ${record.contract_period} ปี</p>` : '';
+        html += record.due_date ? `<p>ครบกำ  นดคืน: ${record.due_date}</p>` : '';
+      } else if (dbType === 'mom_fund') {
+        html += record.president_name ? `<p>ประธาน: ${record.president_name}</p>` : '';
+        html += record.received_year ? `<p>ปีที่ได้รับ: ${record.received_year}</p>` : '';
+        html += record.member_count ? `<p>จำนวนสมาชิก: ${record.member_count} คน</p>` : '';
+        html += record.bag_count ? `<p>จำนวนขวัญถุง: ${record.bag_count}</p>` : '';
+        html += record.faith_amount ? `<p>เงินทุนศรัทธา: ${record.faith_amount} บาท</p>` : '';
+        html += record.account_balance ? `<p>เงินคงเหลือ: ${record.account_balance} บาท</p>` : '';
+        html += record.bank_name ? `<p>ธนาคาร: ${record.bank_name}</p>` : '';
+        html += record.bank_account_number ? `<p>เลขที่บัญชี: ${record.bank_account_number}</p>` : '';
+      } else if (dbType === 'kok_nong_na') {
+        html += record.address ? `<p>ที่อยู่: ${record.address}</p>` : '';
+        html += record.phone ? `<p>เบอร์โทร: ${record.phone}</p>` : '';
+        html += record.area_size ? `<p>ขนาดพื้นที่: ${record.area_size}</p>` : '';
+        html += record.received_year ? `<p>ปีที่ได้รับงบ: ${record.received_year}</p>` : '';
+        html += record.development_activity ? `<p>กิจกรรม: ${record.development_activity}</p>` : '';
+      } else if (dbType === 'sufficiency_village') {
+        html += record.received_year ? `<p>ปีที่ได้รับงบ: ${record.received_year}</p>` : '';
+        html += record.award_activity ? `<p>รางวัล: ${record.award_activity}</p>` : '';
+      } else if (dbType === 'tourism_community') {
+        html += record.president_name ? `<p>ประธาน: ${record.president_name}</p>` : '';
+        html += record.received_year ? `<p>ปีที่ได้รับงบ: ${record.received_year}</p>` : '';
+        html += record.phone ? `<p>เบอร์โทร: ${record.phone}</p>` : '';
+        html += record.community_product ? `<p>ผลิตภัณฑ์: ${record.community_product}</p>` : '';
+        html += record.development_activity ? `<p>กิจกรรม: ${record.development_activity}</p>` : '';
+      }
+      
+      return html || '<p class="text-gray-400">ไม่มีข้อมูลเพิ่มเติม</p>';
+    }
+
+    function showDatabaseForm() {
+      if (!isStaff) return;
+      
+      document.getElementById('databaseDetailForm').reset();
+      document.getElementById('detailId').value = '';
+      document.getElementById('detailVillageId').value = currentDatabaseVillageId;
+      document.getElementById('detailType').value = currentDatabaseType;
+      
+      generateFormFields(currentDatabaseType);
+      
+      document.getElementById('databaseDetailForm').style.display = 'block';
+      document.getElementById('addDatabaseRecordBtn').style.display = 'none';
+    }
+
+    function cancelDatabaseForm() {
+      document.getElementById('databaseDetailForm').style.display = 'none';
+      document.getElementById('addDatabaseRecordBtn').style.display = isStaff ? 'block' : 'none';
+    }
+
+    function generateFormFields(dbType) {
+      const container = document.getElementById('formFieldsContainer');
+      let fieldsHTML = '<div class="space-y-4">';
+      
+      if (dbType === 'saving_group') {
+        fieldsHTML += `
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อกลุ่ม *</label>
+            <input type="text" id="field_group_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อประธานกลุ่ม</label>
+              <input type="text" id="field_president_name" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ปีที่จัดตั้ง</label>
+              <input type="text" id="field_established_year" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จ   นวนสมาชิก</label>
+              <input type="text" id="field_member_count" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนเงินสัจจะ (บาท)</label>
+              <input type="text" id="field_faith_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนผู้กู้ยืมเงิน</label>
+              <input type="text" id="field_borrower_count" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนเงินที่กู้ยืม (บาท)</label>
+              <input type="text" id="field_loan_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">เงินคงเหลือในบัญชี (บาท)</label>
+              <input type="text" id="field_account_balance" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">บัญชีธนาคาร</label>
+              <select id="field_bank_account" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+                <option value="">เลือกธนาคาร</option>
+                ${bankList.map(bank => `<option value="${bank}">${bank}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        `;
+      } else if (dbType === 'kok_project' || dbType === 'village_fund') {
+        const titleText = dbType === 'kok_project' ? 'โครงการ กข.คจ.' : 'กองทุนหมู่บ้าน';
+        fieldsHTML += `
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อกลุ่ม *</label>
+            <input type="text" id="field_group_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อประธาน</label>
+              <input type="text" id="field_president_name" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนสมาชิก</label>
+              <input type="text" id="field_member_count" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนเงินสัจจะ (บาท)</label>
+              <input type="text" id="field_faith_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนผู้กู้ยืมเงิน</label>
+              <input type="text" id="field_borrower_count" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำ  วนเงินที่ยืม (บาท)</label>
+              <input type="text" id="field_loan_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">เงินคงเหลือในบัญชี (บาท)</label>
+              <input type="text" id="field_account_balance" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ธนาคาร</label>
+            <select id="field_bank_name" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+              <option value="">เลือกธนาคาร</option>
+              ${bankList.map(bank => `<option value="${bank}">${bank}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">บัญชีธนาคารเลขที่</label>
+            <input type="text" id="field_bank_account_number" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ปีที่ยืมเงิน</label>
+              <input type="text" id="field_loan_year" onchange="calculateDueDate()" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ระยะเวลาสัญญา (ปี)</label>
+              <input type="text" id="field_contract_period" onchange="calculateDueDate()" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ครบกำหนดคืน</label>
+              <input type="text" id="field_due_date" readonly class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg bg-gray-100">
+            </div>
+          </div>
+        `;
+      } else if (dbType === 'mom_fund') {
+        fieldsHTML += `
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อกลุ่ม *</label>
+            <input type="text" id="field_group_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อประธาน</label>
+              <input type="text" id="field_president_name" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ปีที่ได้รับ</label>
+              <input type="text" id="field_received_year" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนสมาชิก</label>
+              <input type="text" id="field_member_count" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนขวัญถุง</label>
+              <input type="text" id="field_bag_count" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">จำนวนเงินทุนศรัทธา (บาท)</label>
+              <input type="text" id="field_faith_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ยอดเงินคงเหลือ (   าท)</label>
+              <input type="text" id="field_account_balance" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ธนาคาร</label>
+            <select id="field_bank_name" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+              <option value="">เลือกธนาคาร</option>
+              ${bankList.map(bank => `<option value="${bank}">${bank}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">บัญชีธนาคารเลขที่</label>
+            <input type="text" id="field_bank_account_number" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+        `;
+      } else if (dbType === 'kok_nong_na') {
+        fieldsHTML += `
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อแปลง *</label>
+            <input type="text" id="field_plot_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ที่อยู่</label>
+            <textarea id="field_address" rows="2" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">เบอร์โทรติดต่อ</label>
+              <input type="text" id="field_phone" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ขนาดพื้นที่</label>
+              <input type="text" id="field_area_size" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ปีที่ได้รับงบ</label>
+            <input type="text" id="field_received_year" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">กิจกรรมที่ได้รับการพัฒนา</label>
+            <textarea id="field_development_activity" rows="3" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"></textarea>
+          </div>
+        `;
+      } else if (dbType === 'sufficiency_village') {
+        fieldsHTML += `
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อ *</label>
+            <input type="text" id="field_group_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ปีที่ได้รับงบ</label>
+            <input type="text" id="field_received_year" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">กิจกรรมที่ได้รับรางวัล</label>
+            <textarea id="field_award_activity" rows="3" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"></textarea>
+          </div>
+        `;
+      } else if (dbType === 'tourism_community') {
+        fieldsHTML += `
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ชื่อชุมชน *</label>
+            <input type="text" id="field_community_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">   ีที่ได้รับงบ</label>
+              <input type="text" id="field_received_year" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-2 text-gray-700">ประธาน</label>
+              <input type="text" id="field_president_name" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">เบอร์โทรติดต่อ</label>
+            <input type="text" id="field_phone" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">ผลิตภัณฑ์ชุมชน</label>
+            <textarea id="field_community_product" rows="2" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2 text-gray-700">กิจกรรมที่ได้รับ  ารพัฒนา</label>
+            <textarea id="field_development_activity" rows="3" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:outline-none"></textarea>
+          </div>
+        `;
+      }
+      
+      fieldsHTML += '</div>';
+      container.innerHTML = fieldsHTML;
+    }
+
+    function calculateDueDate() {
+      const loanYear = document.getElementById('field_loan_year').value;
+      const contractPeriod = document.getElementById('field_contract_period').value;
+      
+      if (loanYear && contractPeriod) {
+        const dueYear = parseInt(loanYear) + parseInt(contractPeriod);
+        document.getElementById('field_due_date').value = dueYear.toString();
+      }
+    }
+
+    async function saveDatabaseDetail(e) {
+      e.preventDefault();
+      if (!isStaff || isLoading) return;
+      
+      isLoading = true;
+      const submitBtn = document.getElementById('saveDatabaseDetailBtn');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'กำลังบันทึก...';
+      submitBtn.disabled = true;
+      
+      const detailId = document.getElementById('detailId').value;
+      const dbType = document.getElementById('detailType').value;
+      
+      const detailData = {
+        type: 'database_detail',
+        parent_village_id: document.getElementById('detailVillageId').value,
+        database_type: dbType,
+        created_at: new Date().toISOString()
+      };
+      
+      // Collect form fields
+      const fields = ['group_name', 'president_name', 'established_year', 'member_count', 
+                      'faith_amount', 'borrower_count', 'loan_amount', 'account_balance', 
+                      'bank_account', 'bank_name', 'bank_account_number', 'loan_year', 
+                      'contract_period', 'due_date', 'received_year', 'bag_count', 
+                      'plot_name', 'address', 'phone', 'area_size', 'development_activity', 
+                      'award_activity', 'community_name', 'community_product'];
+      
+      fields.forEach(field => {
+        const element = document.getElementById('field_' + field);
+        if (element) {
+          detailData[field] = element.value || '';
+        }
+      });
+      
+      let result;
+      if (detailId) {
+        const existingDetail = allData.find(item => item.__backendId === detailId);
+        result = await window.dataSdk.update({ ...existingDetail, ...detailData });
+      } else {
+        detailData.id = 'detail_' + Date.now();
+        result = await window.dataSdk.create(detailData);
+      }
+      
+      if (result.isOk) {
+        showToast('บันทึกข้อมูลเรียบร้อยแล้ว');
+        cancelDatabaseForm();
+        loadDatabaseRecords(currentDatabaseVillageId, currentDatabaseType);
+        
+        // Send to Google Sheets
+        await sendToGoogleSheets(detailData, detailId ? 'update' : 'create');
+      } else {
+        showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+      }
+      
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+      isLoading = false;
+    }
+
+    function editDatabaseRecord(backendId) {
+      if (!isStaff) return;
+      const record = allData.find(item => item.__backendId === backendId);
+      if (!record) return;
+      
+      document.getElementById('detailId').value = backendId;
+      document.getElementById('detailVillageId').value = record.parent_village_id;
+      document.getElementById('detailType').value = record.database_type;
+      
+      generateFormFields(record.database_type);
+      
+      // Populate form fields
+      const fields = ['group_name', 'president_name', 'established_year', 'member_count', 
+                      'faith_amount', 'borrower_count', 'loan_amount', 'account_balance', 
+                      'bank_account', 'bank_name', 'bank_account_number', 'loan_year', 
+                      'contract_period', 'due_date', 'received_year', 'bag_count', 
+                      'plot_name', 'address', 'phone', 'area_size', 'development_activity', 
+                      'award_activity', 'community_name', 'community_product'];
+      
+      fields.forEach(field => {
+        const element = document.getElementById('field_' + field);
+        if (element && record[field]) {
+          element.value = record[field];
+        }
+      });
+      
+      document.getElementById('databaseDetailForm').style.display = 'block';
+      document.getElementById('addDatabaseRecordBtn').style.display = 'none';
+    }
+
+    async function deleteDatabaseRecord(backendId) {
+      if (!isStaff || isLoading) return;
+      
+      const record = allData.find(item => item.__backendId === backendId);
+      if (!record) return;
+      
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      confirmDiv.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-sm">
+          <h3 class="text-lg font-semibold mb-4">ยืนยันการลบ</h3>
+          <p class="text-gray-600 mb-6">คุณต้องการลบข้อมูลนี้หรือไม่?</p>
+          <div class="flex space-x-3">
+            <button onclick="confirmDeleteDatabaseRecord('${backendId}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">ลบ</button>
+            <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg">ยกเลิก</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(confirmDiv);
+    }
+
+    async function confirmDeleteDatabaseRecord(backendId) {
+      if (isLoading) return;
+      
+      isLoading = true;
+      const record = allData.find(item => item.__backendId === backendId);
+      
+      const result = await window.dataSdk.delete(record);
+      
+      if (result.isOk) {
+        showToast('ลบข้อมูลเรียบร้อยแล้ว');
+        loadDatabaseRecords(currentDatabaseVillageId, currentDatabaseType);
+        
+        // Send delete to Google Sheets
+        await sendToGoogleSheets(record, 'delete');
+      } else {
+        showToast('เกิดข้อผิดพลาดในการลบ', 'error');
+      }
+      
+      document.querySelectorAll('.fixed').forEach(el => {
+        if (el.querySelector('button[onclick*="confirmDeleteDatabaseRecord"]')) {
+          el.remove();
+        }
+      });
+      
+      isLoading = false;
+    }
+
+    function renderVillageTable() {
+      const tbody = document.getElementById('villageTableBody');
+      const villages = allData.filter(item => item.type === 'village');
+      
+      if (villages.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">ยังไม่มีข้อมูลหมู่บ้าน</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = villages.map(village => {
+        const databases = [];
+        if (village.has_saving_group) databases.push('กลุ่มออมทรัพย์');
+        if (village.has_kok_project) databases.push('กข.คจ.');
+        if (village.has_mom_fund) databases.push('กองทุนแม่');
+        if (village.has_info_model) databases.push('สารสนเทศ');
+        if (village.has_otop) databases.push('OTOP');
+        if (village.has_sufficiency_village) databases.push('เศรษฐกิจพอเพียง');
+        if (village.has_kok_nong_na) databases.push('โคก หนอง นา');
+        if (village.has_tourism_community) databases.push('ท่องเที่ยว');
+        if (village.has_village_fund) databases.push('กองทุนหมู่บ้าน');
+        
+        return `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-3">${village.village_name || '-'}</td>
+            <td class="px-4 py-3">${village.village_no || '-'}</td>
+            <td class="px-4 py-3">${village.subdistrict || '-'}</td>
+            <td class="px-4 py-3">${village.district || '-'}</td>
+            <td class="px-4 py-3">
+              ${databases.length > 0 ? databases.map(db => {
+                let dbType = '';
+                let displayName = db;
+                if (db === 'กลุ่มออมทรัพย์') dbType = 'saving_group';
+                else if (db === 'กข.คจ.') dbType = 'kok_project';
+                else if (db === 'กองทุนแม่') dbType = 'mom_fund';
+                else if (db === 'โคก หนอง นา') dbType = 'kok_nong_na';
+                else if (db === 'เศรษฐกิจพอเพียง') dbType = 'sufficiency_village';
+                else if (db === 'ท่องเที่ยว') dbType = 'tourism_community';
+                else if (db === 'กองทุนหมู่บ้าน') dbType = 'village_fund';
+                return `<span class="database-badge cursor-pointer hover:opacity-80" onclick="openDatabaseDetailModal('${village.__backendId}', '${dbType}', '${displayName}')">${db}</span>`;
+              }).join('') : '<span class="text-gray-400">ไม่มีข้อมูล</span>'}
+            </td>
+            ${isStaff ? `
+            <td class="px-4 py-3 text-center">
+              <button onclick="editVillage('${village.__backendId}')" class="text-blue-600 hover:text-blue-800 px-2">✏️</button>
+              <button onclick="deleteVillage('${village.__backendId}')" class="text-red-600 hover:text-red-800 px-2">🗑️</button>
+            </td>
+            ` : ''}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openVillageModal() {
+      if (!isStaff) return;
+      document.getElementById('villageForm').reset();
+      document.getElementById('villageId').value = '';
+      document.getElementById('villageModal').classList.add('active');
+    }
+
+    function closeVillageModal() {
+      document.getElementById('villageModal').classList.remove('active');
+    }
+
+    function updateSubdistrictOptions() {
+      const district = document.getElementById('villageDistrict').value;
+      const subdistrictSelect = document.getElementById('villageSubdistrict');
+      
+      subdistrictSelect.innerHTML = '<option value="">เลือกตำบล</option>';
+      
+      if (district && subdistrictData[district]) {
+        subdistrictData[district].forEach(subdistrict => {
+          const option = document.createElement('option');
+          option.value = subdistrict;
+          option.textContent = subdistrict;
+          subdistrictSelect.appendChild(option);
+        });
+      }
+    }
+
+    async function saveVillage(e) {
+      e.preventDefault();
+      if (!isStaff || isLoading) return;
+      
+      isLoading = true;
+      const submitBtn = document.getElementById('saveVillageBtn');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'กำลังบันทึก...';
+      submitBtn.disabled = true;
+      
+      const villageId = document.getElementById('villageId').value;
+      const villageData = {
+        type: 'village',
+        village_name: document.getElementById('villageName').value,
+        village_no: document.getElementById('villageNo').value,
+        district: document.getElementById('villageDistrict').value,
+        subdistrict: document.getElementById('villageSubdistrict').value,
+        has_saving_group: document.getElementById('hasSavingGroup').checked,
+        has_kok_project: document.getElementById('hasKokProject').checked,
+        has_mom_fund: document.getElementById('hasMomFund').checked,
+        has_info_model: document.getElementById('hasInfoModel').checked,
+        has_otop: document.getElementById('hasOtop').checked,
+        has_sufficiency_village: document.getElementById('hasSufficiencyVillage').checked,
+        has_kok_nong_na: document.getElementById('hasKokNongNa').checked,
+        has_tourism_community: document.getElementById('hasTourismCommunity').checked,
+        has_village_fund: document.getElementById('hasVillageFund').checked,
+        created_at: new Date().toISOString()
+      };
+      
+      let result;
+      if (villageId) {
+        const existingVillage = allData.find(item => item.__backendId === villageId);
+        result = await window.dataSdk.update({ ...existingVillage, ...villageData });
+      } else {
+        villageData.id = 'village_' + Date.now();
+        result = await window.dataSdk.create(villageData);
+      }
+      
+      if (result.isOk) {
+        showToast('บันทึกข้อมูลห   ู่บ้านเรียบร้อยแล้ว');
+        closeVillageModal();
+        
+        // Send to Google Sheets
+        await sendToGoogleSheets(villageData, villageId ? 'update' : 'create');
+      } else {
+        showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
+      }
+      
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+      isLoading = false;
+    }
+
+    function editVillage(backendId) {
+      if (!isStaff) return;
+      const village = allData.find(item => item.__backendId === backendId);
+      if (!village) return;
+      
+      document.getElementById('villageId').value = backendId;
+      document.getElementById('villageName').value = village.village_name || '';
+      document.getElementById('villageNo').value = village.village_no || '';
+      document.getElementById('villageDistrict').value = village.district || '';
+      updateSubdistrictOptions();
+      document.getElementById('villageSubdistrict').value = village.subdistrict || '';
+      document.getElementById('hasSavingGroup').checked = village.has_saving_group || false;
+      document.getElementById('hasKokProject').checked = village.has_kok_project || false;
+      document.getElementById('hasMomFund').checked = village.has_mom_fund || false;
+      document.getElementById('hasInfoModel').checked = village.has_info_model || false;
+      document.getElementById('hasOtop').checked = village.has_otop || false;
+      document.getElementById('hasSufficiencyVillage').checked = village.has_sufficiency_village || false;
+      document.getElementById('hasKokNongNa').checked = village.has_kok_nong_na || false;
+      document.getElementById('hasTourismCommunity').checked = village.has_tourism_community || false;
+      document.getElementById('hasVillageFund').checked = village.has_village_fund || false;
+      
+      document.getElementById('villageModal').classList.add('active');
+    }
+
+    async function deleteVillage(backendId) {
+      if (!isStaff || isLoading) return;
+      
+      const village = allData.find(item => item.__backendId === backendId);
+      if (!village) return;
+      
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      confirmDiv.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-sm">
+          <h3 class="text-lg font-semibold mb-4">ยืนยันการลบ</h3>
+          <p class="text-gray-600 mb-6">คุณต้องการลบข้อมูลหมู่บ้  น "${village.village_name}" หรือไม่?</p>
+          <div class="flex space-x-3">
+            <button onclick="confirmDeleteVillage('${backendId}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">ลบ</button>
+            <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg">ยกเลิก</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(confirmDiv);
+    }
+
+    async function confirmDeleteVillage(backendId) {
+      if (isLoading) return;
+      
+      isLoading = true;
+      const village = allData.find(item => item.__backendId === backendId);
+      
+      const result = await window.dataSdk.delete(village);
+      
+      if (result.isOk) {
+        showToast('ลบข้อมูลหมู่บ้านเรียบร้อยแล้ว');
+        
+        // Send delete to Google Sheets
+        await sendToGoogleSheets(village, 'delete');
+      } else {
+        showToast('เกิดข้อผิดพลาดในการลบ', 'error');
+      }
+      
+      document.querySelectorAll('.fixed').forEach(el => {
+        if (el.querySelector('button[onclick*="confirmDeleteVillage"]')) {
+          el.remove();
+        }
+      });
+      
+      isLoading = false;
+    }
+
+    function filterByDistrict() {
+      const district = document.getElementById('districtFilter').value;
+      const subdistrictFilter = document.getElementById('subdistrictFilter');
+      
+      subdistrictFilter.innerHTML = '<option value="">เลือกตำบล</option>';
+      
+      if (district && subdistrictData[district]) {
+        subdistrictData[district].forEach(subdistrict => {
+          const option = document.createElement('option');
+          option.value = subdistrict;
+          option.textContent = subdistrict;
+          subdistrictFilter.appendChild(option);
+        });
+      }
+      
+      filterVillages();
+    }
+
+    function filterBySubdistrict() {
+      filterVillages();
+    }
+
+    function searchVillages() {
+      filterVillages();
+    }
+
+    function filterVillages() {
+      const district = document.getElementById('districtFilter').value;
+      const subdistrict = document.getElementById('subdistrictFilter').value;
+      const searchTerm = document.getElementById('searchVillage').value.toLowerCase();
+      
+      let filteredVillages = allData.filter(item => item.type === 'village');
+      
+      if (district) {
+        filteredVillages = filteredVillages.filter(v => v.district === district);
+      }
+      
+      if (subdistrict) {
+        filteredVillages = filteredVillages.filter(v => v.subdistrict === subdistrict);
+      }
+      
+      if (searchTerm) {
+        filteredVillages = filteredVillages.filter(v => 
+          (v.village_name && v.village_name.toLowerCase().includes(searchTerm)) ||
+          (v.village_no && v.village_no.toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      const tbody = document.getElementById('villageTableBody');
+      
+      if (filteredVillages.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">ไม่พบข  อมูลหมู่บ้าน</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = filteredVillages.map(village => {
+        const databases = [];
+        if (village.has_saving_group) databases.push('กลุ่มออมทรัพย์');
+        if (village.has_kok_project) databases.push('กข.คจ.');
+        if (village.has_mom_fund) databases.push('กองทุนแม่');
+        if (village.has_info_model) databases.push('สารสนเทศ');
+        if (village.has_otop) databases.push('OTOP');
+        if (village.has_sufficiency_village) databases.push('เศรษฐกิจพอเพียง');
+        if (village.has_kok_nong_na) databases.push('โคก หนอง นา');
+        if (village.has_tourism_community) databases.push('ท่องเที่ยว');
+        if (village.has_village_fund) databases.push('กองทุนหมู่บ้าน');
+        
+        return `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-3">${village.village_name || '-'}</td>
+            <td class="px-4 py-3">${village.village_no || '-'}</td>
+            <td class="px-4 py-3">${village.subdistrict || '-'}</td>
+            <td class="px-4 py-3">${village.district || '-'}</td>
+            <td class="px-4 py-3">
+              ${databases.length > 0 ? databases.map(db => {
+                let dbType = '';
+                let displayName = db;
+                if (db === 'กลุ่มออมทรัพย์') dbType = 'saving_group';
+                else if (db === 'กข.คจ.') dbType = 'kok_project';
+                else if (db === 'กองทุนแม่') dbType = 'mom_fund';
+                else if (db === 'โคก หนอง นา') dbType = 'kok_nong_na';
+                else if (db === 'เศรษฐกิจพอเพียง') dbType = 'sufficiency_village';
+                else if (db === 'ท่องเที่ยว') dbType = 'tourism_community';
+                else if (db === 'กองทุนหมู่บ้าน') dbType = 'village_fund';
+                return `<span class="database-badge cursor-pointer hover:opacity-80" onclick="openDatabaseDetailModal('${village.__backendId}', '${dbType}', '${displayName}')">${db}</span>`;
+              }).join('') : '<span class="text-gray-400">ไม่มีข้อมูล</span>'}
+            </td>
+            ${isStaff ? `
+            <td class="px-4 py-3 text-center">
+              <button onclick="editVillage('${village.__backendId}')" class="text-blue-600 hover:text-blue-800 px-2">✏️</button>
+              <button onclick="deleteVillage('${village.__backendId}')" class="text-red-600 hover:text-red-800 px-2">🗑️</button>
+            </td>
+            ` : ''}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function sendToGoogleSheets(data, action) {
+      try {
+        const payload = {
+          action: action,
+          data: data,
+          timestamp: new Date().toISOString()
+        };
+        
+        await fetch('https://script.google.com/macros/s/AKfycbwPjE9gz2XJmn67616W3yb6qGmtR5yQ4pm5MEY2s0SGnGlTKic3-8raywt-4CrdjUsW/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (error) {
+        console.error('Error sending to Google Sheets:', error);
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      if (type === 'error') {
+        toast.style.background = '#ef4444';
+      }
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    async function onConfigChange(config) {
+      document.getElementById('appTitle').textContent = config.app_title || defaultConfig.app_title;
+      document.getElementById('calendarTitle').textContent = config.calendar_title || defaultConfig.calendar_title;
+      document.getElementById('dashboardTitle').textContent = config.dashboard_title || defaultConfig.dashboard_title;
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['app_title', config.app_title || defaultConfig.app_title],
+          ['calendar_title', config.calendar_title || defaultConfig.calendar_title],
+          ['dashboard_title', config.dashboard_title || defaultConfig.dashboard_title]
+        ])
+      });
+    }
+
+    initApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c3e496fd4a04f5d',t:'MTc2OTQxMjQzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
